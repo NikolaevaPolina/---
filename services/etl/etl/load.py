@@ -8,6 +8,8 @@ from uuid import UUID
 import psycopg
 from psycopg.types.json import Jsonb
 
+from .queries import BronzeSQL
+
 
 def canonical_hash(payload: dict) -> str:
     serialized = json.dumps(payload, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
@@ -30,17 +32,5 @@ def load_bronze(
     if not rows:
         return 0
     with connection.cursor() as cursor:
-        cursor.executemany(
-            """
-            INSERT INTO bronze.tickets_raw (
-                source_ticket_id, source_updated_at, payload, payload_hash, batch_id
-            )
-            VALUES (%s, %s, %s, %s, %s)
-            ON CONFLICT (source_ticket_id, payload_hash) DO UPDATE
-            SET batch_id = EXCLUDED.batch_id,
-                ingested_at = now(),
-                source_updated_at = EXCLUDED.source_updated_at
-            """,
-            rows,
-        )
+        cursor.executemany(BronzeSQL.UPSERT, rows)
     return len(rows)

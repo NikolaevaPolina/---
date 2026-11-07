@@ -1,19 +1,27 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sqlite3
+import time
 from contextlib import asynccontextmanager, closing
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 
 from .generator import build_ticket, resolve_ticket
+from .queries import TicketSQL
 
 
 DB_PATH = Path(os.getenv("SOURCE_DB_PATH", "/data/source.db"))
 INITIAL_TICKETS = int(os.getenv("INITIAL_TICKETS", "1000"))
+logging.basicConfig(
+    level=os.getenv("LOG_LEVEL", "INFO").upper(),
+    format="%(asctime)s %(levelname)s %(name)s %(message)s",
+)
+logger = logging.getLogger("support-source")
 
 
 def connect() -> sqlite3.Connection:
@@ -25,26 +33,18 @@ def connect() -> sqlite3.Connection:
 
 def initialize() -> None:
     with closing(connect()) as connection:
-        connection.execute(
-            """
-            CREATE TABLE IF NOT EXISTS tickets (
-                id INTEGER PRIMARY KEY,
-                updated_at TEXT NOT NULL,
-                payload TEXT NOT NULL
-            )
-            """
-        )
-        count = connection.execute("SELECT COUNT(*) FROM tickets").fetchone()[0]
+        connection.execute(TicketSQL.CREATE_TABLE)
+        count = connection.execute(TicketSQL.COUNT_ALL).fetchone()[0]
         if count == 0:
             base_time = datetime.now(timezone.utc) - timedelta(minutes=10)
             rows = []
             for ticket_id in range(1, INITIAL_TICKETS + 1):
                 ticket = build_ticket(ticket_id, base_time)
                 rows.append((ticket_id, ticket["updated_at"], json.dumps(ticket, ensure_ascii=False)))
-            connection.executemany(
-                "INSERT INTO tickets(id, updated_at, payload) VALUES (?, ?, ?)", rows
-            )
+            connection.executemany(TicketSQL.INSERT, rows)
+            count = len(rows)
         connection.commit()
+    logger.info("source_initialized ticket_count=%d", count)
 
 
 @asynccontextmanager
@@ -61,6 +61,29 @@ app = FastAPI(
 )
 
 
+@app.middleware("http")
+async def log_request(request: Request, call_next):
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception as error:
+        logger.error(
+            "api_request_failed method=%s path=%s error_type=%s",
+            request.method,
+            request.url.path,
+            type(error).__name__,
+        )
+        raise
+    logger.info(
+        "api_request method=%s path=%s status=%d duration_ms=%.1f",
+        request.method,
+        request.url.path,
+        response.status_code,
+        (time.perf_counter() - started) * 1000,
+    )
+    return response
+
+
 @app.get("/health")
 def health() -> dict:
     return {"status": "ok"}
@@ -72,16 +95,16 @@ def get_tickets(
     offset: int = Query(default=0, ge=0),
     limit: int = Query(default=200, ge=1, le=1000),
 ) -> dict:
-    where = "WHERE updated_at > ?" if updated_after else ""
-    parameters = [updated_after.astimezone(timezone.utc).isoformat()] if updated_after else []
     with closing(connect()) as connection:
-        total = connection.execute(
-            f"SELECT COUNT(*) FROM tickets {where}", parameters
-        ).fetchone()[0]
-        rows = connection.execute(
-            f"SELECT payload FROM tickets {where} ORDER BY updated_at, id LIMIT ? OFFSET ?",
-            [*parameters, limit, offset],
-        ).fetchall()
+        if updated_after:
+            cursor = updated_after.astimezone(timezone.utc).isoformat()
+            total = connection.execute(TicketSQL.COUNT_UPDATED_AFTER, (cursor,)).fetchone()[0]
+            rows = connection.execute(
+                TicketSQL.PAGE_UPDATED_AFTER, (cursor, limit, offset)
+            ).fetchall()
+        else:
+            total = connection.execute(TicketSQL.COUNT_ALL).fetchone()[0]
+            rows = connection.execute(TicketSQL.PAGE_ALL, (limit, offset)).fetchall()
     items = [json.loads(row["payload"]) for row in rows]
     next_offset = offset + len(items) if offset + len(items) < total else None
     return {"items": items, "total": total, "offset": offset, "next_offset": next_offset}
@@ -90,9 +113,7 @@ def get_tickets(
 @app.get("/tickets/{ticket_id}")
 def get_ticket(ticket_id: int) -> dict:
     with closing(connect()) as connection:
-        row = connection.execute(
-            "SELECT payload FROM tickets WHERE id = ?", (ticket_id,)
-        ).fetchone()
+        row = connection.execute(TicketSQL.GET_BY_ID, (ticket_id,)).fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Ticket not found")
     return json.loads(row["payload"])
@@ -106,19 +127,16 @@ def advance_source(
     """Add new tickets and resolve several open tickets to demonstrate CDC-like loading."""
     changed_at = datetime.now(timezone.utc)
     with closing(connect()) as connection:
-        max_id = connection.execute("SELECT COALESCE(MAX(id), 0) FROM tickets").fetchone()[0]
+        max_id = connection.execute(TicketSQL.MAX_ID).fetchone()[0]
         inserted = []
         for ticket_id in range(max_id + 1, max_id + new_count + 1):
             ticket = build_ticket(ticket_id, changed_at, force_open=ticket_id % 4 == 0)
             ticket["updated_at"] = (changed_at + timedelta(microseconds=ticket_id - max_id)).isoformat()
             inserted.append((ticket_id, ticket["updated_at"], json.dumps(ticket, ensure_ascii=False)))
-        connection.executemany(
-            "INSERT INTO tickets(id, updated_at, payload) VALUES (?, ?, ?)", inserted
-        )
+        connection.executemany(TicketSQL.INSERT, inserted)
 
         candidates = connection.execute(
-            "SELECT id, payload FROM tickets WHERE id <= ? ORDER BY id DESC LIMIT ?",
-            (max_id, max(update_count * 10, 1)),
+            TicketSQL.UPDATE_CANDIDATES, (max_id, max(update_count * 10, 1))
         ).fetchall()
         updated = 0
         for row in candidates:
@@ -129,11 +147,12 @@ def advance_source(
                 changed = changed_at + timedelta(milliseconds=updated + 1)
                 ticket = resolve_ticket(ticket, changed)
                 connection.execute(
-                    "UPDATE tickets SET updated_at = ?, payload = ? WHERE id = ?",
+                    TicketSQL.UPDATE_TICKET,
                     (ticket["updated_at"], json.dumps(ticket, ensure_ascii=False), row["id"]),
                 )
                 updated += 1
         connection.commit()
+    logger.info("source_advanced new_tickets=%d updated_tickets=%d", len(inserted), updated)
     return {
         "status": "advanced",
         "new_tickets": len(inserted),
@@ -145,7 +164,5 @@ def advance_source(
 @app.get("/stats")
 def source_stats() -> dict:
     with closing(connect()) as connection:
-        row = connection.execute(
-            "SELECT COUNT(*) AS count, MIN(updated_at) AS min_updated, MAX(updated_at) AS max_updated FROM tickets"
-        ).fetchone()
+        row = connection.execute(TicketSQL.STATS).fetchone()
     return dict(row)

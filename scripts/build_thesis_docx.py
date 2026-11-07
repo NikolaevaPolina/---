@@ -134,6 +134,9 @@ def add_heading(doc: Document, text: str, *, chapter=False, front=False):
         p.paragraph_format.page_break_before = True
     else:
         p = doc.add_paragraph(style="Subsection")
+        if text.startswith("2."):
+            p.paragraph_format.space_before = Pt(10)
+            p.paragraph_format.space_after = Pt(6)
     p.add_run(text)
     keep_with_next(p)
     return p
@@ -160,13 +163,22 @@ def add_figure(doc: Document, line: str, base: Path) -> None:
         raise ValueError(f"Unrecognized figure: {line}")
     image = image_for((base / match.group(2)).resolve())
     p = doc.add_paragraph(style="Figure")
-    p.add_run().add_picture(str(image), width=Cm(15.7))
+    if "benchmark_stable" in image.name:
+        # The plot stays readable at this width and avoids an orphaned end page.
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after = Pt(3)
+        width = Cm(13.5)
+    else:
+        width = Cm(15.7)
+    p.add_run().add_picture(str(image), width=width)
     keep_with_next(p)
 
 
 def add_caption(doc: Document, text: str, *, figure: bool) -> None:
     p = doc.add_paragraph(style="Figure Caption" if figure else "Table Caption")
     p.add_run(text.strip("*"))
+    if figure and text.startswith("*Рисунок 4"):
+        p.paragraph_format.space_after = Pt(6)
     keep_with_next(p, not figure)
 
 
@@ -182,6 +194,7 @@ def add_table(doc: Document, lines: list[str]) -> None:
     ncol = len(rows[0])
     if any(len(r) != ncol for r in rows):
         raise ValueError(f"Inconsistent table: {lines[:2]}")
+    compact = "Ошибка обучения" in rows[0] or "Базовый объём заявок" in rows[0]
     table = doc.add_table(rows=len(rows), cols=ncol)
     table.alignment = WD_TABLE_ALIGNMENT.CENTER
     table.autofit = False
@@ -206,7 +219,10 @@ def add_table(doc: Document, lines: list[str]) -> None:
             cell.width = Cm(widths[j])
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
             set_cell_borders(cell)
-            set_cell_margins(cell)
+            if compact:
+                set_cell_margins(cell, top=55, bottom=55)
+            else:
+                set_cell_margins(cell)
             p = cell.paragraphs[0]
             p.paragraph_format.first_line_indent = Cm(0)
             p.paragraph_format.left_indent = Cm(0)

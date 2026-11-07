@@ -5,37 +5,33 @@ import time
 import psycopg
 
 from .config import settings
+from .queries import RunSQL
 
 
 def connect() -> psycopg.Connection:
-    return psycopg.connect(settings.database_url)
+    return psycopg.connect(
+        host=settings.postgres_host,
+        port=settings.postgres_port,
+        dbname=settings.postgres_db,
+        user=settings.postgres_user,
+        password=settings.postgres_password,
+    )
 
 
 def wait_for_database(attempts: int = 20, delay_seconds: float = 1.5) -> None:
-    last_error: Exception | None = None
     for _ in range(attempts):
         try:
             with connect() as connection:
-                connection.execute("SELECT 1")
+                connection.execute(RunSQL.PING)
                 return
-        except psycopg.Error as error:
-            last_error = error
+        except psycopg.Error:
             time.sleep(delay_seconds)
-    raise RuntimeError("PostgreSQL is unavailable") from last_error
+    raise RuntimeError("PostgreSQL is unavailable; check local database settings") from None
 
 
 def get_watermark(connection: psycopg.Connection):
-    return connection.execute(
-        "SELECT watermark FROM meta.etl_state WHERE pipeline_name = 'support_tickets'"
-    ).fetchone()[0]
+    return connection.execute(RunSQL.GET_WATERMARK).fetchone()[0]
 
 
 def set_watermark(connection: psycopg.Connection, watermark) -> None:
-    connection.execute(
-        """
-        UPDATE meta.etl_state
-        SET watermark = %s, updated_at = now()
-        WHERE pipeline_name = 'support_tickets'
-        """,
-        (watermark,),
-    )
+    connection.execute(RunSQL.SET_WATERMARK, (watermark,))

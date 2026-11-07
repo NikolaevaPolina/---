@@ -14,6 +14,8 @@ from uuid import UUID, uuid4
 import psycopg
 from psycopg.types.json import Jsonb
 
+from .queries import ClassificationSQL
+
 
 def tokenize(title: str) -> Counter[str]:
     return Counter(re.findall(r"[а-яёa-z]+", title.lower()))
@@ -149,54 +151,14 @@ def evaluate(model, examples: list[tuple[str, str]], labels: list[str]) -> dict:
 
 def ensure_schema(connection: psycopg.Connection) -> None:
     """Upgrade an existing local volume as well as a fresh initialized database."""
-    connection.execute(
-        """ALTER TABLE meta.etl_runs
-           ADD COLUMN IF NOT EXISTS model_seconds NUMERIC(12, 3),
-           ADD COLUMN IF NOT EXISTS scored_count INTEGER NOT NULL DEFAULT 0"""
-    )
-    connection.execute(
-        """CREATE TABLE IF NOT EXISTS meta.model_versions (
-            model_id UUID PRIMARY KEY,
-            etl_run_id UUID NOT NULL REFERENCES meta.etl_runs(run_id),
-            trained_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-            model_name TEXT NOT NULL,
-            training_count INTEGER NOT NULL,
-            record_test_count INTEGER NOT NULL,
-            record_accuracy NUMERIC(8, 4),
-            record_macro_f1 NUMERIC(8, 4),
-            template_test_count INTEGER NOT NULL,
-            template_accuracy NUMERIC(8, 4),
-            template_macro_f1 NUMERIC(8, 4),
-            majority_baseline NUMERIC(8, 4),
-            candidate_metrics JSONB NOT NULL,
-            model_payload JSONB NOT NULL
-        )"""
-    )
-    connection.execute(
-        """CREATE TABLE IF NOT EXISTS gold.ticket_category_predictions (
-            ticket_id BIGINT PRIMARY KEY REFERENCES silver.tickets(ticket_id),
-            title TEXT NOT NULL,
-            source_category TEXT NOT NULL,
-            predicted_category TEXT NOT NULL,
-            confidence NUMERIC(8, 4) NOT NULL,
-            model_id UUID NOT NULL REFERENCES meta.model_versions(model_id),
-            source_updated_at TIMESTAMPTZ NOT NULL,
-            predicted_at TIMESTAMPTZ NOT NULL DEFAULT now()
-        )"""
-    )
-    connection.execute(
-        """CREATE INDEX IF NOT EXISTS ix_ticket_predictions_category
-           ON gold.ticket_category_predictions(predicted_category)"""
-    )
+    connection.execute(ClassificationSQL.ALTER_RUNS)
+    connection.execute(ClassificationSQL.CREATE_MODEL_VERSIONS)
+    connection.execute(ClassificationSQL.CREATE_PREDICTIONS)
+    connection.execute(ClassificationSQL.CREATE_PREDICTIONS_INDEX)
 
 
 def train_model(connection: psycopg.Connection, run_id: UUID) -> tuple[UUID, object, dict]:
-    rows = connection.execute(
-        """SELECT ticket_id, title, category FROM silver.tickets
-           WHERE status IN ('Закрыта', 'Решена')
-             AND category <> 'Не определена'
-           ORDER BY ticket_id"""
-    ).fetchall()
+    rows = connection.execute(ClassificationSQL.TRAINING_ROWS).fetchall()
     if len(rows) < 25:
         raise RuntimeError("At least 25 resolved tickets are required for classification")
     labels = sorted({category for _, _, category in rows})
@@ -249,12 +211,7 @@ def train_model(connection: psycopg.Connection, run_id: UUID) -> tuple[UUID, obj
     majority = Counter(category for _, category in record_train).most_common(1)[0][0]
     baseline = round(sum(category == majority for _, category in record_test) / len(record_test), 4)
     connection.execute(
-        """INSERT INTO meta.model_versions (
-            model_id, etl_run_id, model_name, training_count, record_test_count,
-            record_accuracy, record_macro_f1, template_test_count,
-            template_accuracy, template_macro_f1, majority_baseline,
-            candidate_metrics, model_payload
-        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)""",
+        ClassificationSQL.SAVE_MODEL,
         (
             model_id, run_id, selected_name, len(rows), len(record_test),
             selected["record_test"]["accuracy"], selected["record_test"]["macro_f1"],
@@ -280,10 +237,7 @@ def train_model(connection: psycopg.Connection, run_id: UUID) -> tuple[UUID, obj
 
 
 def latest_model(connection: psycopg.Connection) -> tuple[UUID, object, dict] | None:
-    row = connection.execute(
-        """SELECT model_id, model_name, model_payload FROM meta.model_versions
-           ORDER BY trained_at DESC, model_id DESC LIMIT 1"""
-    ).fetchone()
+    row = connection.execute(ClassificationSQL.LATEST_MODEL).fetchone()
     if row is None:
         return None
     model_id, name, payload = row
@@ -298,25 +252,11 @@ def run_classification(connection: psycopg.Connection, run_id: UUID, mode: str) 
     model_id, model, result = existing or train_model(connection, run_id)
 
     if mode == "full" or existing is None:
-        connection.execute("DELETE FROM gold.ticket_category_predictions")
-        rows = connection.execute(
-            """SELECT ticket_id, title, category, updated_at FROM silver.tickets
-               WHERE status NOT IN ('Закрыта', 'Решена') ORDER BY ticket_id"""
-        ).fetchall()
+        connection.execute(ClassificationSQL.DELETE_ALL_PREDICTIONS)
+        rows = connection.execute(ClassificationSQL.OPEN_TICKETS_FULL).fetchall()
     else:
-        connection.execute(
-            """DELETE FROM gold.ticket_category_predictions p
-               USING silver.tickets s
-               WHERE p.ticket_id = s.ticket_id AND s.source_batch_id = %s
-                 AND s.status IN ('Закрыта', 'Решена')""",
-            (run_id,),
-        )
-        rows = connection.execute(
-            """SELECT ticket_id, title, category, updated_at FROM silver.tickets
-               WHERE source_batch_id = %s
-                 AND status NOT IN ('Закрыта', 'Решена') ORDER BY ticket_id""",
-            (run_id,),
-        ).fetchall()
+        connection.execute(ClassificationSQL.DELETE_RESOLVED_PREDICTIONS, (run_id,))
+        rows = connection.execute(ClassificationSQL.OPEN_TICKETS_BATCH, (run_id,)).fetchall()
 
     predictions = []
     for ticket_id, title, source_category, updated_at in rows:
@@ -327,20 +267,6 @@ def run_classification(connection: psycopg.Connection, run_id: UUID, mode: str) 
         )
     if predictions:
         with connection.cursor() as cursor:
-            cursor.executemany(
-                """INSERT INTO gold.ticket_category_predictions (
-                    ticket_id, title, source_category, predicted_category,
-                    confidence, model_id, source_updated_at
-                ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                ON CONFLICT (ticket_id) DO UPDATE SET
-                    title = EXCLUDED.title,
-                    source_category = EXCLUDED.source_category,
-                    predicted_category = EXCLUDED.predicted_category,
-                    confidence = EXCLUDED.confidence,
-                    model_id = EXCLUDED.model_id,
-                    source_updated_at = EXCLUDED.source_updated_at,
-                    predicted_at = now()""",
-                predictions,
-            )
+            cursor.executemany(ClassificationSQL.UPSERT_PREDICTIONS, predictions)
     result["scored_count"] = len(predictions)
     return result
