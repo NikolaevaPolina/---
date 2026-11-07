@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import logging
+import json
+import os
+from pathlib import Path
 
 import streamlit as st
 
+from neural import NeuralRanker
 from repository import DatabaseSettings, OperatorRepository
 from support import build_draft, rank_candidates
 
@@ -25,6 +29,14 @@ def repository() -> OperatorRepository:
     instance.prepare()
     logger.info("operator_repository_ready")
     return instance
+
+
+@st.cache_resource
+def load_neural_model(path: str, modified_at: float | None) -> NeuralRanker | None:
+    """Загрузить модель повторно, если файл изменился после обучения."""
+    if modified_at is None:
+        return None
+    return NeuralRanker.load(Path(path))
 
 
 st.title("Рабочее место специалиста технической поддержки")
@@ -57,6 +69,14 @@ selected_id = st.selectbox(
 ticket = ticket_by_id[selected_id]
 logger.info("operator_ticket_view ticket_id=%s", selected_id)
 
+model_path = Path(os.getenv("NEURAL_MODEL_PATH", "/models/neural_ranker.npz"))
+try:
+    modified_at = model_path.stat().st_mtime if model_path.exists() else None
+    neural_model = load_neural_model(str(model_path), modified_at)
+except Exception as error:
+    logger.error("operator_model_load_failed kind=%s", type(error).__name__)
+    neural_model = None
+
 left, right = st.columns([2, 1])
 with left:
     st.subheader("Обращение")
@@ -70,18 +90,42 @@ with right:
     recommendation = ticket.get("predicted_category")
     st.write(f"**Рекомендованная категория:** {recommendation or 'нет'}")
     st.caption("Классификация экспериментальная. Категория заявки не меняется автоматически.")
+    if neural_model is not None:
+        issue_type, _ = neural_model.predict(ticket["title"])
+        st.write(f"**Предполагаемый тип проблемы:** {issue_type}")
+        st.caption("Оценка сети требует проверки специалистом и не является вероятностью решения.")
 
 category_for_search = recommendation or ticket["category"]
 try:
     candidates = repo.closed_candidates(ticket["service"], category_for_search)
-    similar = rank_candidates(ticket, candidates, category_for_search)
+    similar = (
+        neural_model.rank(ticket, candidates)
+        if neural_model is not None
+        else rank_candidates(ticket, candidates, category_for_search)
+    )
 except Exception as error:
     logger.error("operator_retrieval_failed ticket_id=%s kind=%s", selected_id, type(error).__name__)
     st.error("Не удалось получить похожие закрытые обращения.")
     st.stop()
 
 st.subheader("Похожие закрытые обращения")
-st.caption("Сходство рассчитано по словам темы, сервису и категории. Оно не является вероятностью правильного решения.")
+if neural_model is None:
+    st.caption("Пока используется поиск по словам. Для нейросетевого поиска запустите обучение модели.")
+else:
+    st.caption("Порядок заявок рассчитан обученной сетью. Оценка сходства не является вероятностью правильного решения.")
+    metrics_path = model_path.with_suffix(".json")
+    if metrics_path.exists():
+        try:
+            metrics = json.loads(metrics_path.read_text(encoding="utf-8"))
+            st.caption(
+                f"Поиск на {metrics['retrieval_test']['examples']} новых синтетических формулировках "
+                f"среди трёх типов одного сервиса: первая подходящая заявка у сети "
+                f"{metrics['retrieval_test']['neural_recall_at_1']:.1%}, "
+                f"у поиска по словам {metrics['retrieval_test']['lexical_recall_at_1']:.1%}. "
+                "На реальных заявках качество не измерено."
+            )
+        except (OSError, ValueError, KeyError, TypeError) as error:
+            logger.error("operator_metrics_read_failed kind=%s", type(error).__name__)
 reference = None
 if similar:
     similar_by_id = {int(row["ticket_id"]): row for row in similar}

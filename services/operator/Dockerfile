@@ -6,7 +6,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py repository.py queries.py support.py ./
+COPY app.py repository.py queries.py support.py neural.py neural_data.py train_neural.py ./
+COPY test_support.py test_neural.py ./
 
 EXPOSE 8502
 HEALTHCHECK CMD python -c "import urllib.request; urllib.request.urlopen('http://localhost:8502/_stcore/health')"

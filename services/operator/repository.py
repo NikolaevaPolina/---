@@ -69,6 +69,12 @@ class OperatorRepository:
         with self._connect() as connection:
             return connection.execute(OperatorSQL.LIST_OPEN, (limit,)).fetchall()
 
+    def training_titles(self) -> set[str]:
+        """Получить темы закрытых заявок с заполненным текстом решения."""
+        with self._connect() as connection:
+            rows = connection.execute(OperatorSQL.TRAINING_TITLES).fetchall()
+        return {str(row["title"]) for row in rows}
+
     def closed_candidates(
         self, service: str, category: str, limit: int = 500
     ) -> list[dict[str, Any]]:

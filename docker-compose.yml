@@ -71,11 +71,14 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-support_dw}
       POSTGRES_USER: ${POSTGRES_USER:-support}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the local .env file}
+      NEURAL_MODEL_PATH: /models/neural_ranker.npz
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "127.0.0.1:8502:8502"
+    volumes:
+      - ./artifacts/neural_model:/models
     profiles: ["operator"]
 
 volumes:

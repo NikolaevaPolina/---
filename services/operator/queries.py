@@ -2,6 +2,14 @@
 
 
 class OperatorSQL:
+    TRAINING_TITLES = """
+        SELECT DISTINCT title
+        FROM silver.tickets
+        WHERE status IN ('Закрыта', 'Решена')
+          AND NULLIF(BTRIM(resolution_text), '') IS NOT NULL
+        ORDER BY title
+    """
+
     ENSURE_SCHEMA = "CREATE SCHEMA IF NOT EXISTS demo"
 
     ENSURE_REVIEWS = """
