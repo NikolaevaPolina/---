@@ -1,4 +1,7 @@
 .env
+docs/*.md
+scripts/build_thesis_text.py
+scripts/build_thesis_docx.py
 .venv/
 __pycache__/
 *.py[cod]
