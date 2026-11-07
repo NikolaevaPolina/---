@@ -1,0 +1,52 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="220mm" height="125mm" viewBox="0 0 220 125" role="img" aria-labelledby="title desc">
+  <title id="title">Архитектура макета платформы данных</title>
+  <desc id="desc">Имитатор источника передаёт обращения службе обработки. Служба записывает версии, актуальные обращения и витрины в PostgreSQL. Аналитическая панель читает витрины и сведения о запусках.</desc>
+  <rect x="0" y="0" width="220" height="125" fill="#ffffff"/>
+  <style>
+    .box{stroke:#173c56;stroke-width:2;rx:3}
+    .arrow{stroke:#173c56;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .head{font-family:Arial,sans-serif;font-size:6px;font-weight:700;fill:#142b40;text-anchor:middle}
+    .body{font-family:Arial,sans-serif;font-size:4.4px;fill:#304a60;text-anchor:middle}
+    .label{font-family:Arial,sans-serif;font-size:4px;fill:#173c56;text-anchor:middle}
+  </style>
+  <defs><marker id="tip" markerWidth="4" markerHeight="4" refX="3.4" refY="2" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L4,2 L0,4 Z" fill="#173c56"/></marker></defs>
+  <text x="110" y="10" class="head">КОМПОНЕНТЫ ПЛАТФОРМЫ ДАННЫХ</text>
+
+  <rect class="box" x="7" y="31" width="50" height="43" fill="#e8f2fa"/>
+  <text x="32" y="43" class="head">Источник</text>
+  <text x="32" y="52" class="body">Имитатор системы</text>
+  <text x="32" y="59" class="body">обращений</text>
+  <text x="32" y="67" class="body">Синтетические заявки</text>
+
+  <rect class="box" x="73" y="31" width="53" height="43" fill="#dcedf9"/>
+  <text x="99.5" y="43" class="head">Обработка</text>
+  <text x="99.5" y="52" class="body">Получение и запись</text>
+  <text x="99.5" y="59" class="body">Очистка и контроль</text>
+  <text x="99.5" y="67" class="body">Классификация</text>
+
+  <rect class="box" x="142" y="23" width="70" height="63" fill="#e4f4ef"/>
+  <text x="177" y="34" class="head">PostgreSQL</text>
+  <rect x="148" y="40" width="58" height="10" rx="2" fill="#e8f2fa" stroke="#173c56" stroke-width="1"/>
+  <text x="177" y="47" class="body">Исходные версии</text>
+  <rect x="148" y="54" width="58" height="10" rx="2" fill="#d9f0e8" stroke="#173c56" stroke-width="1"/>
+  <text x="177" y="61" class="body">Актуальные заявки</text>
+  <rect x="148" y="68" width="58" height="10" rx="2" fill="#f9ecd2" stroke="#173c56" stroke-width="1"/>
+  <text x="177" y="75" class="body">Витрины и рекомендации</text>
+
+  <path class="arrow" d="M58 52 H70" marker-end="url(#tip)"/>
+  <text x="64" y="47" class="label">JSON</text>
+  <path class="arrow" d="M127 52 H139" marker-end="url(#tip)"/>
+  <text x="133" y="47" class="label">Запросы</text>
+
+  <rect class="box" x="73" y="91" width="53" height="24" fill="#f0f2f4"/>
+  <text x="99.5" y="99" class="head" style="font-size:4.5px">Служебная схема</text>
+  <text x="99.5" y="106" class="body">PostgreSQL</text>
+  <text x="99.5" y="112" class="body">Запуски и проверки</text>
+  <path class="arrow" d="M99.5 75 V88" marker-end="url(#tip)"/>
+
+  <rect class="box" x="142" y="91" width="70" height="24" fill="#f9ecd2"/>
+  <text x="177" y="101" class="head" style="font-size:5px">Аналитическая панель</text>
+  <text x="177" y="109" class="body">Показатели и состояние</text>
+  <path class="arrow" d="M177 87 V89" marker-end="url(#tip)"/>
+  <path class="arrow" d="M127 103 H139" marker-end="url(#tip)"/>
+</svg>

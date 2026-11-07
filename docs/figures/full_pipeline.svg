@@ -1,0 +1,59 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="205mm" height="192mm" viewBox="0 0 205 192" role="img" aria-labelledby="title desc">
+  <title id="title">Сквозной конвейер обработки обращений</title>
+  <desc id="desc">Обращения проходят получение из источника, исходный и очищенный слои, аналитические витрины, контроль качества, классификацию и представление результата в панели.</desc>
+  <rect width="205" height="192" fill="#ffffff"/>
+  <style>
+    .box{stroke:#173c56;stroke-width:2;rx:3}
+    .arrow{stroke:#173c56;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+    .head{font-family:Arial,sans-serif;font-size:5.4px;font-weight:700;fill:#142b40;text-anchor:middle}
+    .sub{font-family:Arial,sans-serif;font-size:3.7px;fill:#304a60;text-anchor:middle}
+  </style>
+  <defs><marker id="tip" markerWidth="4" markerHeight="4" refX="3.3" refY="2" orient="auto" markerUnits="strokeWidth"><path d="M0,0 L4,2 L0,4 Z" fill="#173c56"/></marker></defs>
+  <text x="102.5" y="11" class="head">КОНВЕЙЕР ДАННЫХ ОБРАЩЕНИЙ</text>
+
+  <rect class="box" x="4" y="24" width="60" height="33" fill="#e8f2fa"/>
+  <text x="34" y="36" class="head">Источник</text>
+  <text x="34" y="44" class="sub">Имитатор заявок</text>
+  <text x="34" y="50" class="sub">Полная и выборочная выдача</text>
+
+  <rect class="box" x="72" y="24" width="60" height="33" fill="#d9eafa"/>
+  <text x="102" y="36" class="head">Исходный слой</text>
+  <text x="102" y="44" class="sub">Сообщения и версии</text>
+  <text x="102" y="50" class="sub">Контроль повторов</text>
+
+  <rect class="box" x="140" y="24" width="60" height="33" fill="#def3e9"/>
+  <text x="170" y="36" class="head">Очищенный слой</text>
+  <text x="170" y="44" class="sub">Типизация и нормализация</text>
+  <text x="170" y="50" class="sub">Расчёт временных признаков</text>
+
+  <path class="arrow" d="M65 40.5 H69" marker-end="url(#tip)"/>
+  <path class="arrow" d="M133 40.5 H137" marker-end="url(#tip)"/>
+
+  <rect class="box" x="140" y="76" width="60" height="33" fill="#faecd1"/>
+  <text x="170" y="88" class="head">Витрины</text>
+  <text x="170" y="96" class="sub">Поток, сроки и нагрузка</text>
+  <text x="170" y="102" class="sub">Группировка обращений</text>
+
+  <rect class="box" x="72" y="76" width="60" height="33" fill="#ecf0f4"/>
+  <text x="102" y="88" class="head">Контроль качества</text>
+  <text x="102" y="96" class="sub">Шесть проверок</text>
+  <text x="102" y="102" class="sub">Сверка слоёв</text>
+
+  <rect class="box" x="4" y="76" width="60" height="33" fill="#ece6f8"/>
+  <text x="34" y="88" class="head">Классификация</text>
+  <text x="34" y="96" class="sub">Обучение двух методов</text>
+  <text x="34" y="102" class="sub">Рекомендации категории</text>
+
+  <path class="arrow" d="M170 58.5 V73" marker-end="url(#tip)"/>
+  <path class="arrow" d="M139 92.5 H135" marker-end="url(#tip)"/>
+  <path class="arrow" d="M71 92.5 H67" marker-end="url(#tip)"/>
+
+  <rect class="box" x="36" y="132" width="133" height="31" fill="#e4f4ef"/>
+  <text x="102.5" y="144" class="head">Аналитическая панель</text>
+  <text x="102.5" y="152" class="sub">Показатели, графики, качество и рекомендации</text>
+  <path class="arrow" d="M34 110.5 V120 H102.5 V129" marker-end="url(#tip)"/>
+  <path class="arrow" d="M170 110.5 V122 H152 V129" marker-end="url(#tip)"/>
+
+  <rect x="36" y="173" width="133" height="12" rx="2" fill="#f4f6f8" stroke="#173c56" stroke-width="1"/>
+  <text x="102.5" y="181" class="sub">Журнал запуска · отметка загрузки · версия модели</text>
+</svg>

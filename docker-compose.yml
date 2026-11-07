@@ -1,0 +1,60 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-support_dw}
+      POSTGRES_USER: ${POSTGRES_USER:-support}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-support}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-support} -d ${POSTGRES_DB:-support_dw}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./sql:/docker-entrypoint-initdb.d:ro
+
+  mock-api:
+    build: ./services/api
+    environment:
+      SOURCE_DB_PATH: /data/source.db
+      INITIAL_TICKETS: ${INITIAL_TICKETS:-1000}
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health')"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - source_data:/data
+
+  etl:
+    build: ./services/etl
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://support:support@db:5432/support_dw}
+      SOURCE_API_URL: ${SOURCE_API_URL:-http://mock-api:8000}
+    depends_on:
+      db:
+        condition: service_healthy
+      mock-api:
+        condition: service_healthy
+    volumes:
+      - ./artifacts:/artifacts
+    profiles: ["tools"]
+
+  dashboard:
+    build: ./services/dashboard
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql://support:support@db:5432/support_dw}
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8501:8501"
+
+volumes:
+  postgres_data:
+  source_data:

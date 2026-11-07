@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="180mm" height="47mm" viewBox="0 0 180 47" role="img" aria-labelledby="title desc">
+  <title id="title">Основные этапы обработки обращения</title>
+  <desc id="desc">Регистрация, классификация, назначение, обработка, решение и закрытие; возможен возврат к обработке после уточнения.</desc>
+  <rect width="180" height="47" fill="#fff"/>
+  <defs><marker id="arrow" markerWidth="3" markerHeight="3" refX="2.5" refY="1.5" orient="auto" markerUnits="strokeWidth"><path d="M0 0 L3 1.5 L0 3Z" fill="#24465e"/></marker></defs>
+  <style>
+    .b{stroke:#24465e;stroke-width:2;rx:2;fill:#e9f2f8}
+    .t{font:700 3.1px Arial,sans-serif;fill:#18364a;text-anchor:middle}
+    .a{stroke:#24465e;stroke-width:2;fill:none;stroke-linecap:round;stroke-linejoin:round}
+  </style>
+  <path class="a" d="M105 30 V38 H75 V30" marker-end="url(#arrow)"/>
+  <path d="M28 18 L31 20.5 L28 23Z M58 18 L61 20.5 L58 23Z M88 18 L91 20.5 L88 23Z M118 18 L121 20.5 L118 23Z M148 18 L151 20.5 L148 23Z" fill="#24465e"/>
+  <rect class="b" x="2" y="12" width="25" height="17"/><text class="t" x="14.5" y="22.5">Регистрация</text>
+  <rect class="b" x="32" y="12" width="25" height="17"/><text class="t" x="44.5" y="22.5">Категория</text>
+  <rect class="b" x="62" y="12" width="25" height="17"/><text class="t" x="74.5" y="22.5">Назначение</text>
+  <rect class="b" x="92" y="12" width="25" height="17" fill="#e6f3ed"/><text class="t" x="104.5" y="22.5">Обработка</text>
+  <rect class="b" x="122" y="12" width="25" height="17" fill="#fff0dc"/><text class="t" x="134.5" y="22.5">Решение</text>
+  <rect class="b" x="152" y="12" width="25" height="17" fill="#fff0dc"/><text class="t" x="164.5" y="22.5">Закрытие</text>
+  <text x="91" y="44" class="t" style="font-size:3.2px;font-weight:400">возврат после уточнения или повторного открытия</text>
+</svg>

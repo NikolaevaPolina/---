@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="920" height="446" viewBox="0 0 920 446">
+<rect width="100%" height="100%" fill="white"/>
+<text x="30" y="37" font-family="Arial" font-size="22" font-weight="bold">Время обработки обращений</text>
+<text x="30" y="61" font-family="Arial" font-size="13" fill="#555">Медиана трёх запусков; пакет: 100 новых и до 20 обновлённых</text>
+<text x="30" y="119" font-family="Arial" font-size="16">30 300 заявок</text>
+<rect x="265" y="92" width="15" height="28" rx="3" fill="#1674b8"/>
+<text x="288" y="112" font-family="Arial" font-size="13">0.422 с</text>
+<rect x="265" y="128" width="374" height="28" rx="3" fill="#e28e36"/>
+<text x="647" y="148" font-family="Arial" font-size="13">10.418 с</text>
+<text x="30" y="231" font-family="Arial" font-size="16">35 000 заявок</text>
+<rect x="265" y="204" width="16" height="28" rx="3" fill="#1674b8"/>
+<text x="289" y="224" font-family="Arial" font-size="13">0.457 с</text>
+<rect x="265" y="240" width="451" height="28" rx="3" fill="#e28e36"/>
+<text x="724" y="260" font-family="Arial" font-size="13">12.573 с</text>
+<text x="30" y="343" font-family="Arial" font-size="16">40 000 заявок</text>
+<rect x="265" y="316" width="18" height="28" rx="3" fill="#1674b8"/>
+<text x="291" y="336" font-family="Arial" font-size="13">0.499 с</text>
+<rect x="265" y="352" width="555" height="28" rx="3" fill="#e28e36"/>
+<text x="828" y="372" font-family="Arial" font-size="13">15.457 с</text>
+<rect x="265" y="414" width="14" height="14" fill="#1674b8"/>
+<text x="286" y="426" font-family="Arial" font-size="13">Инкрементально</text>
+<rect x="445" y="414" width="14" height="14" fill="#e28e36"/>
+<text x="466" y="426" font-family="Arial" font-size="13">Полностью</text>
+</svg>
