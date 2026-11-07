@@ -1,4 +1,4 @@
-"""Database access for the optional operator demonstration."""
+"""Доступ к базе данных из демонстрационного экрана специалиста."""
 
 from __future__ import annotations
 

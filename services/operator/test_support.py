@@ -1,4 +1,4 @@
-"""Focused checks for ranking and safe draft wording."""
+"""Проверки сортировки похожих заявок и текста рекомендации."""
 
 import unittest
 

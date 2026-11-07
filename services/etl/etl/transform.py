@@ -1,4 +1,4 @@
-"""Move ticket versions into the typed layer and refresh analytical marts."""
+"""Перенос версий заявок в очищенный слой и обновление аналитических витрин."""
 
 from __future__ import annotations
 

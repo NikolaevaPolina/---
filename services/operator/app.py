@@ -1,4 +1,4 @@
-"""Optional human-review screen for synthetic support requests."""
+"""Экран проверки рекомендаций специалистом на синтетических заявках."""
 
 from __future__ import annotations
 

@@ -46,7 +46,7 @@ def _iso(value: datetime | None) -> str | None:
 
 
 def build_ticket(ticket_id: int, base_time: datetime, force_open: bool = False) -> dict:
-    """Create a deterministic, synthetic and fully anonymous service desk ticket."""
+    """Создать воспроизводимую синтетическую заявку без персональных данных."""
     rng = random.Random(ticket_id * 7919)
     service = rng.choice(list(SERVICES))
     title = rng.choice(SERVICES[service])

@@ -1,7 +1,7 @@
-"""Static SQL statements used by the ETL pipeline.
+"""Запросы к слоям хранилища и служебным таблицам конвейера.
 
-Statements are grouped by the component that owns the data. Values are passed
-to psycopg separately; no ticket content is interpolated into SQL text.
+Значения передаются драйверу отдельно от текста SQL. Содержание заявок
+не подставляется в запросы строковой операцией.
 """
 
 

@@ -1,4 +1,4 @@
-"""Static, parameterized SQL used by the operator demonstration."""
+"""Запросы к данным для демонстрационного экрана специалиста."""
 
 
 class OperatorSQL:

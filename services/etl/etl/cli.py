@@ -25,6 +25,7 @@ logger = logging.getLogger("support-etl")
 
 
 def execute(mode: str) -> dict:
+    # Один идентификатор связывает события журнала и записи в служебных таблицах.
     run_id = uuid4()
     started = time.perf_counter()
     stage = "database"
@@ -63,6 +64,7 @@ def execute(mode: str) -> dict:
             watermark_to = watermark_from
 
         with connect() as connection:
+            # Данные слоёв и отметка загрузки подтверждаются одной транзакцией.
             stage = "load"
             stage_started = time.perf_counter()
             loaded_count = load_bronze(connection, tickets, run_id)
@@ -135,6 +137,7 @@ def execute(mode: str) -> dict:
         logger.info("run_id=%s mode=%s stage=complete status=success seconds=%.3f", run_id, mode, duration)
         return result
     except Exception as error:
+        # В журнал попадает тип ошибки без текста заявки и параметров подключения.
         duration = time.perf_counter() - started
         safe_error = f"{stage}: {type(error).__name__}"
         logger.error("run_id=%s mode=%s stage=%s status=failed error_type=%s", run_id, mode, stage, type(error).__name__)

@@ -1,7 +1,7 @@
-"""Reproducible category recommendations from synthetic ticket titles.
+"""Воспроизводимая рекомендация категории по теме синтетической заявки.
 
-Only the title is a feature. The service, description and recorded category are
-excluded from inference because the synthetic generator exposes the answer there.
+При обучении используется только тема. Остальные поля исключены,
+поскольку генератор раскрывает в них правильную категорию.
 """
 
 from __future__ import annotations
@@ -95,8 +95,8 @@ class CentroidClassifier:
             denominator = token_norm * self.norms[category]
             scores[category] = numerator / denominator if denominator else 0.0
         best = max(scores, key=lambda category: (scores[category], category))
-        # Scores are cosine similarities. Softmax provides a bounded display
-        # value, not a calibrated probability on real service-desk data.
+        # Оценки основаны на косинусном сходстве. После нормировки они удобны
+        # для вывода, но не являются вероятностями для реальных заявок.
         anchor = max(scores.values())
         normalizer = sum(math.exp(4 * (score - anchor)) for score in scores.values())
         return best, 1 / normalizer
@@ -150,7 +150,7 @@ def evaluate(model, examples: list[tuple[str, str]], labels: list[str]) -> dict:
 
 
 def ensure_schema(connection: psycopg.Connection) -> None:
-    """Upgrade an existing local volume as well as a fresh initialized database."""
+    """Подготовить схему как в новой, так и в существующей локальной базе."""
     connection.execute(ClassificationSQL.ALTER_RUNS)
     connection.execute(ClassificationSQL.CREATE_MODEL_VERSIONS)
     connection.execute(ClassificationSQL.CREATE_PREDICTIONS)
@@ -171,8 +171,8 @@ def train_model(connection: psycopg.Connection, run_id: UUID) -> tuple[UUID, obj
     if not record_train or not record_test:
         raise RuntimeError("The deterministic 80/20 split is empty")
 
-    # Hold out one complete title template per category to expose the
-    # optimistic score caused by repeated synthetic phrases.
+    # По одному шаблону каждой категории исключаем из обучения, чтобы
+    # обнаружить завышенную оценку из-за повторяющихся синтетических тем.
     templates = defaultdict(set)
     for _, title, category in train_rows:
         templates[category].add(title)

@@ -1,7 +1,7 @@
-"""Explainable retrieval and draft preparation for a support specialist.
+"""Поиск похожих заявок и подготовка текста для проверки специалистом.
 
-The returned score is lexical overlap on synthetic titles, not a probability
-that a past resolution will solve the current request.
+Оценка сходства отражает совпадение слов в синтетических темах.
+Она не показывает вероятность решения новой заявки.
 """
 
 from __future__ import annotations
@@ -15,6 +15,7 @@ def title_words(value: str) -> set[str]:
 
 
 def similarity_score(current: Mapping, candidate: Mapping, category: str | None) -> float:
+    # Сходство темы имеет больший вес; сервис и категория уточняют порядок выдачи.
     current_words = title_words(str(current["title"]))
     past_words = title_words(str(candidate["title"]))
     union = current_words | past_words
@@ -36,7 +37,7 @@ def rank_candidates(
 
 
 def build_draft(current: Mapping, reference: Mapping | None) -> str:
-    """Prepare a reviewable reply without claiming the new issue is resolved."""
+    """Составить текст рекомендации без утверждения, что заявка уже решена."""
     title = str(current["title"]).strip()
     if reference is None:
         return (

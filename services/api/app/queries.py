@@ -1,4 +1,4 @@
-"""Static, parameterized SQLite statements for the synthetic source."""
+"""Запросы к локальному хранилищу синтетических заявок."""
 
 
 class TicketSQL:

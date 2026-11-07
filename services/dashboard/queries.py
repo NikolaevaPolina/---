@@ -1,4 +1,4 @@
-"""Static, parameterized SQL for the analytical dashboard."""
+"""Запросы к аналитическим витринам с передачей параметров отдельно от текста SQL."""
 
 
 class DashboardSQL:

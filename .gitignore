@@ -2,6 +2,7 @@
 docs/*.md
 scripts/build_thesis_text.py
 scripts/build_thesis_docx.py
+scripts/thesis_page_map.py
 .venv/
 __pycache__/
 *.py[cod]

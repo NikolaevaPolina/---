@@ -124,7 +124,7 @@ def advance_source(
     new_count: int = Query(default=100, ge=0, le=100_000),
     update_count: int = Query(default=20, ge=0, le=10_000),
 ) -> dict:
-    """Add new tickets and resolve several open tickets to demonstrate CDC-like loading."""
+    """Добавить заявки и завершить часть открытых для проверки выборочной загрузки."""
     changed_at = datetime.now(timezone.utc)
     with closing(connect()) as connection:
         max_id = connection.execute(TicketSQL.MAX_ID).fetchone()[0]
